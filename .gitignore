@@ -1,0 +1,5 @@
+secrets.yaml
+secrets-dev.yaml
+secrets-prod.yaml
+# Patterns to ignore when building packages.
+# This supports shell glob matching, relative path matching, and

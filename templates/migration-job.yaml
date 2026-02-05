@@ -1,0 +1,41 @@
+{{- if .Values.migration.enabled -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "laravel_backend_helm.fullname" . }}-migration
+  labels:
+    {{- include "laravel_backend_helm.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  template:
+    metadata:
+      name: {{ include "laravel_backend_helm.fullname" . }}-migration
+      labels:
+        {{- include "laravel_backend_helm.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: OnFailure
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: migration
+          image: "{{ .Values.imageBackend.repository }}:{{ .Values.imageBackend.tag }}"
+          imagePullPolicy: IfNotPresent
+          command: ["php", "artisan", "migrate", "--force"]
+          envFrom:
+            {{- if .Values.externalSecret.enabled }}
+            - secretRef:
+                name: {{ .Values.externalSecret.target.name }}
+            {{- end }}
+          env:
+            {{- range .Values.containers }}
+              {{- if eq .name "backend" }}
+                {{- if .env }}
+                  {{- toYaml .env | nindent 12 }}
+                {{- end }}
+              {{- end }}
+            {{- end }}
+{{- end -}}

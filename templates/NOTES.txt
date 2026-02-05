@@ -1,0 +1,109 @@
+Thank you for installing {{ .Chart.Name }}!
+
+Your release is named {{ .Release.Name }}.
+
+To learn more about the release, try:
+
+  $ helm status {{ .Release.Name }}
+  $ helm get all {{ .Release.Name }}
+
+{{- if .Values.ingress.enabled }}
+Application URL:
+{{- range $host := .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host.host }}
+{{- end }}
+{{- else if contains "NodePort" .Values.service.type }}
+To access your application, run these commands:
+  export NODE_PORT=$(kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "laravel_backend_helm.fullname" . }})
+  export NODE_IP=$(kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}")
+  echo http://$NODE_IP:$NODE_PORT
+{{- else if contains "LoadBalancer" .Values.service.type }}
+To access your application, run these commands:
+  NOTE: It may take a few minutes for the LoadBalancer IP to be available.
+        You can watch its status by running 'kubectl get --namespace {{ .Release.Namespace }} svc -w {{ include "laravel_backend_helm.fullname" . }}'
+  export SERVICE_IP=$(kubectl get svc --namespace {{ .Release.Namespace }} {{ include "laravel_backend_helm.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}")
+  echo http://$SERVICE_IP:{{ .Values.service.port }}
+{{- else if contains "ClusterIP" .Values.service.type }}
+To access your application locally, run:
+  export POD_NAME=$(kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/name={{ include "laravel_backend_helm.name" . }},app.kubernetes.io/instance={{ .Release.Name }}" -o jsonpath="{.items[0].metadata.name}")
+  echo "Visit http://127.0.0.1:8080 to use your application"
+  kubectl --namespace {{ .Release.Namespace }} port-forward $POD_NAME 8080:80
+{{- end }}
+
+DEPLOYMENT INFORMATION:
+
+Namespace: {{ .Release.Namespace }}
+Release Name: {{ .Release.Name }}
+Chart Version: {{ .Chart.Version }}
+App Version: {{ .Chart.AppVersion }}
+
+{{- if .Values.config.enabled }}
+ConfigMaps created:
+{{- range .Values.config.data }}
+  - {{ include "laravel_backend_helm.fullname" $ }}-{{ .name }}
+{{- end }}
+{{- end }}
+
+{{- if .Values.queue.enabled }}
+Queue Worker:
+  - Replicas: {{ .Values.queue.replicas }}
+  - Command: {{ .Values.queue.command | join " " }}
+  - Check logs: kubectl logs -f deployment/{{ include "laravel_backend_helm.fullname" . }}-queue -n {{ .Release.Namespace }}
+{{- end }}
+
+{{- if .Values.redis.enabled }}
+Redis:
+  - Service: {{ include "laravel_backend_helm.fullname" . }}-redis
+  - Port: {{ .Values.redis.port | default 6379 }}
+{{- end }}
+
+USEFUL COMMANDS:
+
+# Watch pods status
+kubectl get pods -n {{ .Release.Namespace }} -w
+
+# View backend logs
+kubectl logs -f deployment/{{ include "laravel_backend_helm.fullname" . }} -n {{ .Release.Namespace }} -c backend
+
+# View nginx logs
+kubectl logs -f deployment/{{ include "laravel_backend_helm.fullname" . }} -n {{ .Release.Namespace }} -c nginx
+
+# Check environment variables in pod
+kubectl exec -it $(kubectl get pod -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "laravel_backend_helm.name" . }} -o jsonpath='{.items[0].metadata.name}') -n {{ .Release.Namespace }} -c backend -- env
+
+# Run artisan commands
+kubectl exec -it $(kubectl get pod -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "laravel_backend_helm.name" . }} -o jsonpath='{.items[0].metadata.name}') -n {{ .Release.Namespace }} -c backend -- php artisan
+
+{{- if .Values.queue.enabled }}
+# View queue worker logs
+kubectl logs -f deployment/{{ include "laravel_backend_helm.fullname" . }}-queue -n {{ .Release.Namespace }}
+
+# Check queue worker status
+kubectl exec -it $(kubectl get pod -n {{ .Release.Namespace }} -l app=laravel-backend-queue -o jsonpath='{.items[0].metadata.name}') -n {{ .Release.Namespace }} -- php artisan queue:status
+{{- end }}
+
+# Run Laravel migrations
+kubectl exec -it $(kubectl get pod -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "laravel_backend_helm.name" . }} -o jsonpath='{.items[0].metadata.name}') -n {{ .Release.Namespace }} -c backend -- php artisan migrate --force
+
+# Clear Laravel cache
+kubectl exec -it $(kubectl get pod -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "laravel_backend_helm.name" . }} -o jsonpath='{.items[0].metadata.name}') -n {{ .Release.Namespace }} -c backend -- php artisan cache:clear
+
+# Clear config cache
+kubectl exec -it $(kubectl get pod -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "laravel_backend_helm.name" . }} -o jsonpath='{.items[0].metadata.name}') -n {{ .Release.Namespace }} -c backend -- php artisan config:clear
+
+TROUBLESHOOTING:
+
+# If pods are not starting, check events:
+kubectl describe pod -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "laravel_backend_helm.name" . }}
+
+# If ConfigMaps are missing, verify they exist:
+kubectl get configmaps -n {{ .Release.Namespace }}
+
+# If secrets are missing, list secrets:
+kubectl get secrets -n {{ .Release.Namespace }}
+
+# Check database connectivity from pod
+kubectl exec -it $(kubectl get pod -n {{ .Release.Namespace }} -l app.kubernetes.io/name={{ include "laravel_backend_helm.name" . }} -o jsonpath='{.items[0].metadata.name}') -n {{ .Release.Namespace }} -c backend -- php artisan db:show
+
+For more information, visit:
+https://github.com/laravel/docs

@@ -1,0 +1,38 @@
+{{- if .Values.ingressRoute.enabled -}}
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ include "laravel_backend_helm.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "laravel_backend_helm.labels" . | nindent 4 }}
+  {{- with .Values.ingressRoute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  entryPoints:
+    {{- toYaml .Values.ingressRoute.entryPoints | nindent 4 }}
+  routes:
+  {{- range .Values.ingressRoute.hosts }}
+    - match: Host(`{{ .host }}`){{ if .path }} && PathPrefix(`{{ .path }}`){{ end }}
+      kind: Rule
+      services:
+        - name: {{ include "laravel_backend_helm.fullname" $ }}
+          port: {{ $.Values.service.port }}
+      {{- if or $.Values.middleware.headers.enabled .middlewares }}
+      middlewares:
+        {{- if $.Values.middleware.headers.enabled }}
+        - name: default-headers
+          namespace: {{ $.Release.Namespace }}
+        {{- end }}
+        {{- with .middlewares }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- end }}
+  {{- end }}
+  {{- if .Values.ingressRoute.tls.enabled }}
+  tls:
+    secretName: {{ .Values.ingressRoute.tls.secretName }}
+  {{- end }}
+{{- end }}

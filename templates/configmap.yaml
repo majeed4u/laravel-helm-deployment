@@ -1,0 +1,21 @@
+{{- if .Values.config.enabled | default false }}
+{{- range .Values.config.data }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "laravel_backend_helm.fullname" $ }}-{{ .name }}
+  labels:
+    {{- include "laravel_backend_helm.labels" $ | nindent 4 }}
+data:
+  {{- range $key, $value := .config }}
+  {{- $valueStr := $value | toString }}
+  {{- if contains "\n" $valueStr }}
+  {{ $key }}: |
+{{ $valueStr | indent 4 }}
+  {{- else }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+  {{- end }}
+---
+{{- end }}
+{{- end }}

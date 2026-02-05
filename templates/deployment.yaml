@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "laravel_backend_helm.fullname" . }}
+  labels:
+    {{- include "laravel_backend_helm.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "laravel_backend_helm.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "laravel_backend_helm.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "laravel_backend_helm.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        {{- $nginxEnabled := .Values.nginx.enabled | default true }}
+        {{- range .Values.containers }}
+        {{- if or (not (eq .name "nginx")) $nginxEnabled }}
+        - name: {{ .name }}
+          {{- with .securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- if eq .name "backend" }}
+          image: "{{ $.Values.imageBackend.repository }}:{{ $.Values.imageBackend.tag }}"
+          {{- else if eq .name "nginx" }}
+          image: "{{ $.Values.imageNginx.repository }}:{{ $.Values.imageNginx.tag }}"
+          {{- else }}
+          image: "{{ .image | default $.Values.imageBackend.repository }}:{{ .tag | default $.Values.imageBackend.tag }}"
+          {{- end }}
+          imagePullPolicy: {{ .imagePullPolicy }}
+          {{- with .command }}
+          command:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          envFrom:
+            {{- with .envFrom }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- if and $.Values.secret.enabled (eq .name "backend") }}
+            {{- range $.Values.secret.data }}
+            - secretRef:
+                name: {{ include "laravel_backend_helm.fullname" $ }}-{{ .name }}
+            {{- end }}
+            {{- end }}
+            {{- if and $.Values.externalSecret.enabled (eq .name "backend") }}
+            - secretRef:
+                name: {{ $.Values.externalSecret.target.name }}
+            {{- end }}
+          {{- with .env }}
+          env:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .startupProbe }}
+          startupProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .ports }}
+          ports:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .volumeMounts }}
+          volumeMounts:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+        {{- end }}
+        {{- end }}
+      volumes:
+        {{- if .Values.config.enabled | default false }}
+        {{- range .Values.config.data }}
+        - name: {{ .name }}
+          configMap:
+            name: {{ include "laravel_backend_helm.fullname" $ }}-{{ .name }}
+        {{- end }}
+        {{- end }}
+        {{- with .Values.volumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
