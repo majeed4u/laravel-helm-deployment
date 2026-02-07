@@ -24,7 +24,7 @@ spec:
         - name: migration
           image: "{{ .Values.imageBackend.repository }}:{{ .Values.imageBackend.tag }}"
           imagePullPolicy: IfNotPresent
-          command: ["php", "artisan", "migrate", "--force"]
+          command: ["php", "artisan", "migrate", "--force", "--no-interaction"]
           envFrom:
             {{- if .Values.externalSecret.enabled }}
             - secretRef:

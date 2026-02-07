@@ -364,3 +364,6 @@ For issues and questions:
 - Check the Troubleshooting section above
 - Review Kubernetes pod logs and events
 - Verify your values file configuration
+
+
+helm upgrade --install laravel-backend  ./laravel-helm-deployment  --values ./laravel-helm-deployment/values-dev.yaml --namespace dev --create-namespace

@@ -8,7 +8,7 @@ replicaCount: 1
 # Image configurations for containers
 imageBackend:
   repository: gitea.mjdev.dev/gitadmin/registery/laravel-backend
-  tag: "24"
+  tag: "32"
 
 imageNginx:
   repository: docker.io/library/nginx
@@ -386,13 +386,6 @@ externalSecret:
   dataFrom:
     - extract:
         key: laravel_backend_dev
-
-# Oracle Auth Configuration
-oracleAuth:
-  enabled: false
-  secretName: oracle-auth
-  privatekey: ""
-  fingerprint: ""
 
 # Secret Store Configuration
 secretStore:

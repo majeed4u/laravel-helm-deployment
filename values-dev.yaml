@@ -3,6 +3,10 @@
 
 replicaCount: 1
 
+podAnnotations:
+  # reloader.stakater.com/rollout-strategy: "restart"
+  secret.reloader.stakater.com/auto: "true"
+  configmap.reloader.stakater.com/auto: "true"
 # Image pull secrets
 imagePullSecrets:
   - name: docker
@@ -44,8 +48,10 @@ migration:
 # Queue worker for dev
 queue:
   enabled: true
-  replicas: 1
+
+  replicas: 2
   terminationGracePeriodSeconds: 30
+  env: {}
   command:
     - "php"
     - "artisan"
@@ -78,6 +84,7 @@ queue:
 containers:
   - name: backend
     # envFrom is auto-generated from Secrets (when secret.enabled: true)
+
     imagePullPolicy: IfNotPresent
     command: ["php-fpm"]
     args: ["-F", "-R"]
@@ -114,6 +121,7 @@ containers:
       limits:
         memory: "256Mi"
         cpu: "200m"
+
   - name: nginx
     imagePullPolicy: IfNotPresent
     ports:
@@ -170,12 +178,6 @@ externalSecret:
     - extract:
         key: laravel_backend_dev
 
-# Oracle Auth Secret
-# SECURITY: Apply the secret manually using: kubectl apply -f oci-auth/external-secret/oracle-auth.yaml
-oracleAuth:
-  enabled: false
-  secretName: oracle-auth
-
 # Secret Store (Oracle Vault)
 secretStore:
   create: true
@@ -229,3 +231,7 @@ config:
             gzip_static on;
             gzip_types text/css application/javascript application/json image/svg+xml text/plain;
           }
+
+# middleware:
+#   headers:
+#     enabled: false

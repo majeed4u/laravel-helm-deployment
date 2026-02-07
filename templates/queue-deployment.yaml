@@ -14,6 +14,10 @@ spec:
       app: laravel-backend-queue
   template:
     metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       labels:
         {{- include "laravel_backend_helm.labels" . | nindent 8 }}
         app: laravel-backend-queue
@@ -52,7 +56,7 @@ spec:
             - secretRef:
                 name: {{ .Values.externalSecret.target.name }}
             {{- end }}
-          {{- with .Values.queue.env }}
+          {{- with .Values.queue.env | default list }}
           env:
             {{- toYaml . | nindent 12 }}
           {{- end }}

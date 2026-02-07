@@ -2,6 +2,10 @@
 # Overrides for prod environment
 
 replicaCount: 3
+podAnnotations:
+  # reloader.stakater.com/rollout-strategy: "restart"
+  secret.reloader.stakater.com/auto: "true"
+  configmap.reloader.stakater.com/auto: "true"
 
 autoscaling:
   enabled: true
